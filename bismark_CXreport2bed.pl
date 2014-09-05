@@ -7,12 +7,12 @@ for my $report (@reports) {
 
     open IN, '<', $report;
     
-    open CpGplus,  '>', "$report\.CpGplus";
-    open CpGminus, '>', "$report\.CpGminus";
-    open CHGplus,  '>', "$report\.CHGplus";
-    open CHGminus, '>', "$report\.CHGminus";
-    open CHHplus,  '>', "$report\.CHHplus";
-    open CHHminus, '>', "$report\.CHHminus";
+    open CpGplus,  '>', "$report\.CpGplus.bed";
+    open CpGminus, '>', "$report\.CpGminus.bed";
+    open CHGplus,  '>', "$report\.CHGplus.bed";
+    open CHGminus, '>', "$report\.CHGminus.bed";
+    open CHHplus,  '>', "$report\.CHHplus.bed";
+    open CHHminus, '>', "$report\.CHHminus.bed";
 
     while (<IN>) {
 	my ($scaffold, $position_start, $strand, $count_meth, $count_unmeth, $context, $trinuc) = split /\s+/, $_;
@@ -35,10 +35,24 @@ for my $report (@reports) {
             print CHHplus "$scaffold\t$position_start\t$position_stop\t$percent_meth\n";
 	}
 	if ($strand eq "-" && $context eq "CHH") {
-            print CHHplus "$scaffold\t$position_start\t$position_stop\t$percent_meth\n";
+            print CHHminus "$scaffold\t$position_start\t$position_stop\t$percent_meth\n";
 	}
     }
+}
 
 # now convert the bedGraph files to bigwig using ucsc bedgraph2bigwig
+# forking the process to spawn one thread / bedGraph file
 
+my @beds = <*.bed>;
+for my $bed (@beds) {
+    my $pid = fork();
+    if ($pid==0) { # child
+        system "/usr/local/ucsc/latest/bedGraphToBigWig $bed chromLens $bed\.bigwig";
+        die "Exec $i failed: $!\n";
+    } elsif (!defined $pid) {
+        warn "Fork $i failed: $!\n";
+    }
+}
+
+1 while wait() >= 0;
 
