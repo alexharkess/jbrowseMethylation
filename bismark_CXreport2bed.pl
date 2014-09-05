@@ -17,8 +17,17 @@ for my $report (@reports) {
     while (<IN>) {
 	my ($scaffold, $position_start, $strand, $count_meth, $count_unmeth, $context, $trinuc) = split /\s+/, $_;
 	my $position_stop = $position_start + 1;
-	my $percent_meth = $count_meth / ($count_meth + $count_unmeth);
+	my $percent_meth;
+
+	# calculating percent methylation at sites with > 2 mapped Cs
+	if ( ($count_meth + $count_unmeth) >= 2) {
+	    $percent_meth = $count_meth / ($count_meth + $count_unmeth);
+	}
+	else {
+	    $percent_meth = 0;
+	}
 	
+	# write bedGraphs for each strand, each context
 	if ($strand eq "+" && $context eq "CG") {
 	    print CpGplus "$scaffold\t$position_start\t$position_stop\t$percent_meth\n";
 	}
@@ -29,7 +38,7 @@ for my $report (@reports) {
             print CHGplus "$scaffold\t$position_start\t$position_stop\t$percent_meth\n";
 	}
 	if ($strand eq "-" && $context eq "CHG") {
-            print CpGminus "$scaffold\t$position_start\t$position_stop\t$percent_meth\n";
+            print CHGminus "$scaffold\t$position_start\t$position_stop\t$percent_meth\n";
 	}
 	if ($strand eq "+" && $context eq "CHH") {
             print CHHplus "$scaffold\t$position_start\t$position_stop\t$percent_meth\n";
@@ -48,9 +57,9 @@ for my $bed (@beds) {
     my $pid = fork();
     if ($pid==0) { # child
         system "/usr/local/ucsc/latest/bedGraphToBigWig $bed chromLens $bed\.bigwig";
-        die "Exec $i failed: $!\n";
+        die "Exec $bed failed: $!\n";
     } elsif (!defined $pid) {
-        warn "Fork $i failed: $!\n";
+        warn "Fork $bed failed: $!\n";
     }
 }
 
